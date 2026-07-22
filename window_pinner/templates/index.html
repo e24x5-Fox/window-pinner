@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Window Pinner</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2a1 1 0 0 1 1 1v3.382l3.106 1.553A2 2 0 0 1 17 9.723V12a1 1 0 0 1-1 1h-3v6l-1 2-1-2v-6H8a1 1 0 0 1-1-1V9.723a2 2 0 0 1 .894-1.788L11 6.382V3a1 1 0 0 1 1-1Z" fill="currentColor"/>
+        </svg>
+        <div>
+          <h1>Window Pinner</h1>
+          <p class="subtitle">Свяжи окна — двигай одно, остальные поедут за ним</p>
+        </div>
+      </div>
+      <label class="switch" title="Включить/выключить синхронизацию перемещений">
+        <input type="checkbox" id="engine-toggle" checked>
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+        <span class="switch-label" id="engine-label">Синхронизация включена</span>
+      </label>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Открытые окна</h2>
+          <div class="panel-tools">
+            <div class="search">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm10 2-5.6-5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="text" id="search" placeholder="Фильтр по названию…">
+            </div>
+            <button class="btn ghost" id="refresh-btn">Обновить</button>
+          </div>
+        </div>
+        <div id="windows-grid" class="grid"></div>
+        <p id="windows-empty" class="empty hidden">Не найдено открытых окон.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Группы</h2>
+        </div>
+        <div id="groups-list" class="groups-list"></div>
+        <p id="groups-empty" class="empty">Пока нет групп — выбери минимум 2 окна выше и нажми «Связать».</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Эффект перетаскивания</h2>
+        </div>
+        <p class="settings-hint">Какое окно из группы ни потащишь — оно становится главным, остальные остаются на месте, пока ты его тащишь. Когда отпускаешь — все плавно подъезжают на своё точное место.</p>
+        <div class="slider-row">
+          <label for="return-slider">Время возврата на место</label>
+          <input type="range" id="return-slider" min="0" max="1200" step="10">
+          <span class="slider-value" id="return-value">250 мс</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="selection-bar hidden" id="selection-bar">
+    <span id="selection-count">Выбрано: 0</span>
+    <div class="selection-actions">
+      <button class="btn ghost" id="clear-selection">Отмена</button>
+      <button class="btn primary" id="link-btn" disabled>Связать</button>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+pywin32
+pystray
+Pillow
+Flask
+pywebview
+pythonnet
