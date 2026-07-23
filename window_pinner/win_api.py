@@ -219,7 +219,11 @@ def raise_below(hwnd, insert_after_hwnd):
         pass
 
 
-def _is_candidate_window(hwnd):
+def is_candidate_window(hwnd):
+    """True for a top-level, visible, titled window that isn't a tool
+    window — the same eligibility bar used for the group-creation picker,
+    also used by the overlay to decide whether an ungrouped window should
+    offer "add to group"."""
     if not win32gui.IsWindowVisible(hwnd):
         return False
     if win32gui.GetParent(hwnd) != 0:
@@ -238,7 +242,7 @@ def list_windows():
     result = []
 
     def _enum(hwnd, _):
-        if _is_candidate_window(hwnd):
+        if is_candidate_window(hwnd):
             title = win32gui.GetWindowText(hwnd)
             cls = win32gui.GetClassName(hwnd)
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
