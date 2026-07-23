@@ -5,7 +5,7 @@ import os
 
 from flask import Flask, jsonify, render_template, request
 
-from . import win_api
+from . import demo_windows, win_api
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -78,6 +78,11 @@ def create_app(group_manager):
         if group is None:
             return jsonify({"error": "group not found"}), 404
         return jsonify(group.to_dict())
+
+    @app.post("/api/demo-windows")
+    def api_demo_windows_create():
+        number = demo_windows.spawn_demo_window()
+        return jsonify({"number": number}), 201
 
     @app.get("/api/engine")
     def api_engine_get():

@@ -43,6 +43,19 @@ WINEVENT_SKIPOWNPROCESS = 0x0002
 OBJID_WINDOW = 0
 CHILDID_SELF = 0
 
+VK_LBUTTON = 0x01
+user32.GetAsyncKeyState.restype = ctypes.c_short
+user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+
+
+def is_mouse_button_down():
+    """True if the left mouse button is physically held down right now. A
+    real interactive move/resize always starts with the button down (that's
+    what WM_ENTERSIZEMOVE requires); a spurious MOVESIZESTART some apps fire
+    in reaction to our own SetWindowPos calls never does — this is a much
+    more reliable way to tell the two apart than any timing heuristic."""
+    return bool(user32.GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+
 WinEventProcType = ctypes.WINFUNCTYPE(
     None,
     wintypes.HANDLE,  # hWinEventHook
@@ -113,6 +126,10 @@ def get_window_rect(hwnd):
 
 def is_window_valid(hwnd):
     return bool(win32gui.IsWindow(hwnd))
+
+
+def is_minimized(hwnd):
+    return bool(win32gui.IsIconic(hwnd))
 
 
 def get_foreground_window():

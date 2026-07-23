@@ -5,6 +5,9 @@
   const groupsEmpty = document.getElementById("groups-empty");
   const searchInput = document.getElementById("search");
   const refreshBtn = document.getElementById("refresh-btn");
+  const demoBtn = document.getElementById("demo-btn");
+  const demoFilterBtn = document.getElementById("demo-filter-btn");
+  const brandTrigger = document.getElementById("brand-trigger");
   const selectionBar = document.getElementById("selection-bar");
   const selectionCount = document.getElementById("selection-count");
   const linkBtn = document.getElementById("link-btn");
@@ -17,7 +20,12 @@
 
   let windowsCache = [];
   let groupsCache = [];
+  let demoOnly = false;
   const selected = new Set();
+
+  function isDemoWindow(w) {
+    return w.title.startsWith("ДЕМОокно");
+  }
 
   function showToast(message, isError = false) {
     const el = document.createElement("div");
@@ -47,7 +55,9 @@
 
   function renderWindows() {
     const query = searchInput.value.trim().toLowerCase();
-    const filtered = windowsCache.filter((w) => w.title.toLowerCase().includes(query));
+    const filtered = windowsCache
+      .filter((w) => w.title.toLowerCase().includes(query))
+      .filter((w) => !demoOnly || isDemoWindow(w));
 
     grid.innerHTML = "";
     windowsEmpty.classList.toggle("hidden", filtered.length > 0);
@@ -221,6 +231,40 @@
   });
 
   refreshBtn.addEventListener("click", () => loadAll().catch((e) => showToast(e.message, true)));
+
+  // Hidden dev feature: click the logo 5 times in a row (within 2s of each
+  // other) to reveal the demo-window button.
+  let brandClicks = 0;
+  let brandClickTimer = null;
+  brandTrigger.addEventListener("click", () => {
+    brandClicks += 1;
+    clearTimeout(brandClickTimer);
+    brandClickTimer = setTimeout(() => { brandClicks = 0; }, 2000);
+    if (brandClicks >= 5) {
+      brandClicks = 0;
+      demoBtn.classList.remove("hidden");
+      demoFilterBtn.classList.remove("hidden");
+      showToast("Демо-режим включён");
+    }
+  });
+
+  demoBtn.addEventListener("click", async () => {
+    try {
+      await api("/api/demo-windows", { method: "POST" });
+      showToast("Демо-окно создано");
+      setTimeout(() => loadAll().catch(() => {}), 300);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  });
+
+  demoFilterBtn.addEventListener("click", () => {
+    demoOnly = !demoOnly;
+    demoFilterBtn.classList.toggle("primary", demoOnly);
+    demoFilterBtn.classList.toggle("ghost", !demoOnly);
+    demoFilterBtn.textContent = demoOnly ? "Показать все окна" : "Только демо-окна";
+    renderWindows();
+  });
   searchInput.addEventListener("input", renderWindows);
 
   engineToggle.addEventListener("change", async () => {

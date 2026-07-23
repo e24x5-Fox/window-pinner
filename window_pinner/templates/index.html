@@ -9,7 +9,7 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand">
+      <div class="brand" id="brand-trigger" title="">
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2a1 1 0 0 1 1 1v3.382l3.106 1.553A2 2 0 0 1 17 9.723V12a1 1 0 0 1-1 1h-3v6l-1 2-1-2v-6H8a1 1 0 0 1-1-1V9.723a2 2 0 0 1 .894-1.788L11 6.382V3a1 1 0 0 1 1-1Z" fill="currentColor"/>
         </svg>
@@ -35,6 +35,8 @@
               <input type="text" id="search" placeholder="Фильтр по названию…">
             </div>
             <button class="btn ghost" id="refresh-btn">Обновить</button>
+            <button class="btn ghost hidden" id="demo-btn" title="Создать тестовое окно с надписью «ДЕМОокно» для проверки связывания">Создать демо-окно</button>
+            <button class="btn ghost hidden" id="demo-filter-btn" title="Показывать в списке только демо-окна">Только демо-окна</button>
           </div>
         </div>
         <div id="windows-grid" class="grid"></div>

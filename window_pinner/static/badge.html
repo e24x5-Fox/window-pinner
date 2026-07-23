@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>badge</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* The native window is clipped to this element's exact pill shape (see
+     OverlayManager._apply_region), not left to real alpha compositing —
+     WebView2's "transparent window" support only fakes transparency within
+     its own control hierarchy, it doesn't do real per-pixel alpha against
+     whatever's behind the window on Windows. So nothing here can rely on
+     soft/blurred edges (backdrop-filter, a blurred box-shadow) fading into
+     "whatever's behind" — anything not exactly inside the clip region would
+     show as a solid box instead of fading out. Depth comes from a crisp
+     border and an inset highlight instead, both of which stay fully inside
+     the shape. */
+  #badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 999px;
+    background: #1b1e25;
+    border: 1.4px solid #2a2e37;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: border-color .15s ease;
+  }
+  #dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 6px;
+    flex: none;
+    background: #9aa4b2;
+    transition: background-color .15s ease, box-shadow .15s ease;
+  }
+  #dot.hollow {
+    background: transparent;
+    border: 1.4px solid #9aa4b2;
+  }
+  .btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #f0f2f6;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .12s ease, transform .08s ease, filter .12s ease;
+  }
+  .btn:hover { background: rgba(255, 255, 255, 0.08); }
+  .btn:active { transform: scale(0.96); }
+  .btn.dim { color: #9aa4b2; }
+  .btn.filled { color: var(--fill-text, #0f1216); background: var(--fill-color, #6c8ef5); }
+  .btn.filled:hover { filter: brightness(1.12); background: var(--fill-color, #6c8ef5); }
+  .btn.icon { padding: 7px 10px; color: #ff6b5e; font-size: 14px; }
+  .btn.icon:hover { background: rgba(255, 107, 94, 0.18); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="badge">
+    <div id="dot"></div>
+    <button id="mainBtn" class="btn"></button>
+    <button id="secondaryBtn" class="btn filled hidden"></button>
+    <button id="deleteBtn" class="btn icon hidden">&#10005;</button>
+  </div>
+<script>
+  const badge = document.getElementById("badge");
+  const dot = document.getElementById("dot");
+  const mainBtn = document.getElementById("mainBtn");
+  const secondaryBtn = document.getElementById("secondaryBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+
+  mainBtn.addEventListener("click", () => window.pywebview.api.main_click());
+  secondaryBtn.addEventListener("click", () => window.pywebview.api.secondary_click());
+  deleteBtn.addEventListener("click", () => window.pywebview.api.delete_click());
+
+  function blend(hex, bgHex, ratio) {
+    const c = [1, 3, 5].map((i) => parseInt(hex.substr(i, 2), 16));
+    const b = [1, 3, 5].map((i) => parseInt(bgHex.substr(i, 2), 16));
+    const m = c.map((v, i) => Math.round(b[i] * (1 - ratio) + v * ratio));
+    return "#" + m.map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+
+  function applyState(s) {
+    badge.style.borderColor = s.borderColor;
+
+    if (s.dotHollow) {
+      dot.classList.add("hollow");
+      dot.style.borderColor = s.dotColor;
+      dot.style.boxShadow = "none";
+    } else {
+      dot.classList.remove("hollow");
+      dot.style.background = s.dotColor;
+      dot.style.boxShadow = "0 0 0 4px " + blend(s.dotColor, "#1b1e25", 0.35);
+    }
+
+    mainBtn.textContent = s.main.text;
+    mainBtn.className = "btn" + (s.main.filled ? " filled" : (s.main.dim ? " dim" : ""));
+    if (s.main.filled) {
+      mainBtn.style.setProperty("--fill-color", s.main.fillColor);
+      mainBtn.style.setProperty("--fill-text", s.main.fillText);
+    }
+
+    if (s.secondary) {
+      secondaryBtn.textContent = s.secondary.text;
+      secondaryBtn.style.setProperty("--fill-color", s.secondary.fillColor);
+      secondaryBtn.style.setProperty("--fill-text", s.secondary.fillText);
+      secondaryBtn.classList.remove("hidden");
+    } else {
+      secondaryBtn.classList.add("hidden");
+    }
+
+    deleteBtn.classList.toggle("hidden", !s.showDelete);
+  }
+  window.applyState = applyState;
+
+  const ro = new ResizeObserver(() => {
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.report_size(
+        Math.ceil(document.body.scrollWidth),
+        Math.ceil(document.body.scrollHeight)
+      );
+    }
+  });
+  ro.observe(document.body);
+</script>
+</body>
+</html>

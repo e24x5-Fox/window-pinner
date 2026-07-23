@@ -186,6 +186,30 @@ class GroupManager:
         self.save()
         return group
 
+    def add_to_group(self, group_id, hwnd_list):
+        """Add one or more windows to an already-existing group."""
+        with self._lock:
+            group = self.groups.get(group_id)
+            if group is None:
+                return None
+            for hwnd in hwnd_list:
+                if hwnd in group.members:
+                    continue
+                title = None
+                cls = None
+                try:
+                    import win32gui
+                    title = win32gui.GetWindowText(hwnd)
+                    cls = win32gui.GetClassName(hwnd)
+                except Exception:
+                    pass
+                group.members[hwnd] = {"title": title or "", "class": cls or ""}
+                rect = win_api.get_window_rect(hwnd)
+                if rect:
+                    self._last_rect[hwnd] = rect
+        self.save()
+        return group
+
     def remove_group(self, group_id):
         with self._lock:
             self.groups.pop(group_id, None)
@@ -305,13 +329,22 @@ class GroupManager:
                     # Windows can fire MOVESIZESTART/END for a window we are
                     # currently repositioning ourselves via rapid
                     # SetWindowPos calls, even though nobody is actually
-                    # dragging it. Only treat this as that kind of echo if we
-                    # genuinely touched this exact window very recently —
-                    # otherwise a stale/stuck session (e.g. a missed
-                    # MOVESIZEEND) would permanently block every OTHER
-                    # window in the group from ever becoming the mover again.
+                    # dragging it. That used to be rare enough that "we
+                    # touched this window very recently" was a decent proxy
+                    # for "this is that kind of echo, not a real grab" — but
+                    # followers now get touched on essentially every ~15ms
+                    # tick for as long as they're easing (both while the
+                    # leader is being dragged and during the post-release
+                    # glide), so that recency window is basically always
+                    # "hot" and would swallow a genuine grab of any window
+                    # that happens to still be mid-ease, fighting the user's
+                    # drag with our own animation instead of taking over.
+                    # The mouse button is the reliable signal instead: a
+                    # real interactive move always has it down; a spurious
+                    # self-triggered event never does.
                     last_touch = self._last_programmatic_move.get(hwnd, 0.0)
-                    if time.monotonic() - last_touch < ECHO_GRACE:
+                    recently_touched = time.monotonic() - last_touch < ECHO_GRACE
+                    if recently_touched and not win_api.is_mouse_button_down():
                         return
                 # Whether it's the same leader being re-grabbed before its
                 # group finished easing into place, or a different window
@@ -332,7 +365,23 @@ class GroupManager:
 
             base_rects = {}
             for h in owner_group.members:
-                if h != hwnd and h in resolved:
+                # This applies to the new mover too, not just the other
+                # followers: if hwnd was itself still mid-ease under the
+                # previous session (the "different window takes over" case),
+                # its true target is in `resolved` same as everyone else's.
+                # Using its raw (not-yet-arrived) actual rect here instead
+                # would silently bake that leftover ease gap into the
+                # group's formation as a permanent offset from this point
+                # on — the rest of the group would forever be positioned
+                # relative to where this window happened to be caught
+                # mid-flight rather than where it was actually supposed to
+                # end up, which is exactly the "windows forgot their grid
+                # position" symptom. Anchoring the new mover's own baseline
+                # to its true target instead means the first tick's delta
+                # (actual-vs-true) is nonzero and gets absorbed into the
+                # normal per-tick easing of the *other* members, correcting
+                # the gap smoothly instead of adopting it as the new normal.
+                if h in resolved:
                     base_rects[h] = resolved[h]
                     continue
                 rect = self._last_rect.get(h) or win_api.get_window_rect(h)
@@ -400,6 +449,17 @@ class GroupManager:
                     owner_group = group
                     break
             if owner_group is None or not owner_group.locked:
+                return
+
+            if win_api.is_minimized(hwnd):
+                # GetWindowRect on a minimized window reports a meaningless
+                # off-screen placeholder rect (roughly -32000,-32000), not
+                # its real position. Treating that as a genuine move would
+                # compute a huge bogus delta and fling the rest of the group
+                # off-screen — and doing the same again on restore would
+                # compound it further. Just ignore the change entirely and
+                # keep the last known real rect cached, so the delta once it
+                # restores is computed from where it actually was.
                 return
 
             new_rect = win_api.get_window_rect(hwnd)

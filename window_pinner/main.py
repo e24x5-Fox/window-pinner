@@ -55,16 +55,16 @@ def main():
     )
     watcher.start()
 
-    overlay = OverlayManager(group_manager)
-    overlay.start()
-
     port = _find_port(PREFERRED_PORT)
     url = f"http://127.0.0.1:{port}/"
+    badge_url = f"http://127.0.0.1:{port}/static/badge.html"
     app = create_app(group_manager)
     server = make_server("127.0.0.1", port, app)
 
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
+
+    overlay = OverlayManager(group_manager, badge_url)
 
     if webview2.is_available():
         _run_with_embedded_window(url, watcher, group_manager, overlay, server)
@@ -81,6 +81,10 @@ def _run_with_embedded_window(url, watcher, group_manager, overlay, server):
     window = webview.create_window(
         "Window Pinner", url, width=1040, height=800, min_size=(760, 560)
     )
+
+    # Must be created after the main window so the main window stays
+    # pywebview's "master" window and the badge is a child of it.
+    overlay.start()
 
     def on_closing():
         # Clicking the window's own close button minimizes to tray instead
